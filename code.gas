@@ -1,0 +1,44 @@
+function onOpen(){
+  SpreadsheetApp.getActiveSpreadsheet().addMenu('計算', [{name: 'amazon', functionName: 'myFunction'}]);
+}
+function myFunction() {
+  var period = Browser.inputBox('調べたい年を半角数字4文字で入力してください。', '2015,2014全部の場合はallで', Browser.Buttons.OK_CANCEL);
+  getSearchThreads(period);
+
+}
+function getSearchThreads(period){
+  var threads;
+  if(period.toLowerCase() == "all"){
+    threads = GmailApp.search('subject:"Amazon.co.jp ご注文の確認"');
+  } else {
+    threads = GmailApp.search('subject:"Amazon.co.jp ご注文の確認",after:'+period+'/1/1 , before:'+period+'/12/31');
+  }
+  var num = threads.length*1.2;
+  var second =  Math.round(num%60);
+  var minutes = Math.round((num-second)/60);
+  if(checkTime('購入回数は'+threads.length+'回でした。\\n計算にはおよそ'+minutes+'分'+second+'秒ほどかかる見込みです。')){
+    cal(threads);
+  } else {
+    Browser.msgBox("実行を終了しました。");
+  }
+}
+function cal(threads){
+  var cash = [];
+  var total = 0;
+  var threadsLength = threads.length;
+  for(var i = 0;i<threadsLength;i++){
+    var body = threads[i].getMessages()[0].getBody().replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'').replace(/[\n\r ]/g,'');
+    var index = body.indexOf('注文合計');
+    total = total + Number(body.substring(index,index+20).replace(/[^0-9]/g,''));
+  }
+  Browser.msgBox('購入回数: '+threadsLength+'\\n購入金額: '+total);
+}
+function checkTime(message){
+  var flag = Browser.msgBox(message, Browser.Buttons.OK_CANCEL);
+  if(flag == 'ok') {
+    Logger.log('ok');
+    return true;
+  } else if(flag == 'cancel'){
+    return false;
+  }
+}
